@@ -15,14 +15,13 @@ namespace ProjectB
 {
     class Bot
     {
-        // Bot token : ODkzOTcxMzIzMzQ3NDA2OTYw.YVjNrA.j5bioYnMp3C7ahHzjDwl8uxSDdA
         // The interface to the discord client
         public DiscordSocketClient m_discordClient { get; private set; }
 
 
         // Bot token
         // TODO: Get this value from an environment variable
-        private string m_botToken;// = "ODkzOTcxMzIzMzQ3NDA2OTYw.YVjNrA.j5bioYnMp3C7ahHzjDwl8uxSDdA";
+        private string m_botToken;
         public async Task RunAsync()
         {
             IServiceProvider services = ConfigureServices();
