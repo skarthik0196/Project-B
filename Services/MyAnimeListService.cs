@@ -25,12 +25,6 @@ namespace ProjectB.Services
             m_services            = serviceProvider;
         }
 
-        // Empty for now
-        //public async Task InitializeAsync()
-        //{
-        //    
-        //}
-
         public async Task<List<AnimeSearchEntry>> SearchForAnime(string searchString)
         {
             JikanDotNet.AnimeSearchResult searchResult = await m_jikan.SearchAnime(searchString);

@@ -13,7 +13,6 @@ namespace ProjectB.Modules
     public class FunModule : ModuleBase<SocketCommandContext>
     {
         [Command("hello")]
-        [Alias("hi", "yo")]
         public async Task HelloAsync()
         {
             await ReplyAsync("Hello World");

@@ -144,6 +144,7 @@ namespace ProjectB.Services
         }
 
         // Should we just change this into an async function that is part of the regular loop?
+        // Maybe once we add message based reaction.
         private void CleanEvents(object sender, ElapsedEventArgs elapsedEventArgs)
         {
             List<UInt64> keysToClean = new List<ulong>();

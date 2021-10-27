@@ -20,7 +20,7 @@ namespace ProjectB
 
 
         // Bot token
-        // TODO: Get this value from an environment variable
+        // Currently gets this values from an environment variable.
         private string m_botToken;
         public async Task RunAsync()
         {
