@@ -42,7 +42,7 @@ namespace ProjectB
             await services.GetRequiredService<CommandHandler>().InitializeAsync();
 
             // Initialize the event handler
-            await services.GetRequiredService<EmbedHandler>().InitializeAsync();
+            await services.GetRequiredService<Services.EventHandler>().InitializeAsync();
 
             // Block until program is closed.
             await Task.Delay(Timeout.Infinite);
@@ -68,7 +68,7 @@ namespace ProjectB
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<CommandHandler>()
-                .AddSingleton<EmbedHandler>()
+                .AddSingleton<ProjectB.Services.EventHandler>()
                 .AddSingleton<Jikan>()
                 .AddSingleton<MyAnimeListService>()
                 .BuildServiceProvider();

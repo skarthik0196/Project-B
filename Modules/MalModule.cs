@@ -17,7 +17,7 @@ namespace ProjectB.Modules
         public readonly MyAnimeListService m_malService;
         static private string s_InformationEmoji = "ℹ️";
 
-        public MalModule(EmbedHandler embedHandler, MyAnimeListService malService) : base(embedHandler)
+        public MalModule(Services.EventHandler embedHandler, MyAnimeListService malService) : base(embedHandler)
         {
             m_malService = malService;
         }
@@ -64,15 +64,15 @@ namespace ProjectB.Modules
 
             List<IEmote> emote = new List<IEmote> { infoEmoji };
 
-            EmbedHandlerEvent handlerEvent;
-            handlerEvent.callback = DisplayDetailedAnime;
-            handlerEvent.message = message;
+            ReactionEventInfo handlerEvent;
+            handlerEvent.callback       = DisplayDetailedAnime;
+            handlerEvent.message        = message;
             handlerEvent.restrictToUser = false;
-            handlerEvent.user = null;
-            handlerEvent.data = obj;
+            handlerEvent.user           = null;
+            handlerEvent.data           = obj;
             handlerEvent.reactionEmojis = emote;
 
-            m_embedHandler.AddOneTimeEvent(handlerEvent);
+            m_eventHandler.AddReactionEvent(handlerEvent);
         }
 
         public async Task DisplayDetailedAnime(IUserMessage message, ISocketMessageChannel channel, SocketReaction reaction, object obj)

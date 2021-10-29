@@ -16,8 +16,6 @@ namespace ProjectB.Services
         private readonly IJikan m_jikan;
         private readonly IServiceProvider m_services;
         private readonly DiscordSocketClient m_discordSocketClient;
-        private readonly EmbedHandler m_embedHandler;
-
         public MyAnimeListService(IServiceProvider serviceProvider)
         {
             m_discordSocketClient = serviceProvider.GetRequiredService<DiscordSocketClient>();

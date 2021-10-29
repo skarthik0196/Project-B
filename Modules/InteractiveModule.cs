@@ -36,7 +36,7 @@ namespace ProjectB.Modules
 
     public class InteractiveModule : ModuleBase<SocketCommandContext>
     {
-        public readonly EmbedHandler     m_embedHandler;
+        public readonly Services.EventHandler     m_eventHandler;
 
         private enum EmojiType
         {
@@ -67,9 +67,9 @@ namespace ProjectB.Modules
 
         private static Int32 entriesPerPage = 5;
 
-        protected InteractiveModule(EmbedHandler embedHandler)
+        protected InteractiveModule(Services.EventHandler embedHandler)
         {
-            m_embedHandler = embedHandler;
+            m_eventHandler = embedHandler;
         }
 
         public async Task SendPagedMessageAsync(PagedMessage pagedMessage)
@@ -95,7 +95,8 @@ namespace ProjectB.Modules
 
             for (Int32 i = 0; i < entriesPerPage; ++i)
             {
-                builder.AddField($"{(i + 1).ToString()}", pagedMessage.pagedString[pagedMessage.startIndex + i].ToString());
+                //builder.AddField($"{(i + 1).ToString()}", pagedMessage.pagedString[pagedMessage.startIndex + i].ToString());
+                builder.AddField($"{(pagedMessage.startIndex + i + 1).ToString()}", pagedMessage.pagedString[pagedMessage.startIndex + i].ToString());
             }
 
             return builder.Build();
@@ -108,20 +109,13 @@ namespace ProjectB.Modules
             IEmote[] reactions = new IEmote[]
             {
                 new Emoji(s_EmojiArray[((int)EmojiType.LeftArrow)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.RightArrow)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.Number1)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.Number2)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.Number3)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.Number4)]),
-                new Emoji(s_EmojiArray[((int)EmojiType.Number5)]),
+                new Emoji(s_EmojiArray[((int)EmojiType.RightArrow)])
             };
 
+            // Should we skip the await and just continue?
+            await embedMessage.AddReactionsAsync(reactions);
 
-            // Send the reaction Async, waiting here with await seems to block the gateway for some reason
-            // Just send the reaction async and don't wait.
-            Task reactionTask = embedMessage.AddReactionsAsync(reactions);
-
-            EmbedHandlerEvent reactionEvent;
+            ReactionEventInfo reactionEvent;
 
             reactionEvent.restrictToUser = pagedMessageData.restrictToUser;
             reactionEvent.message        = embedMessage;
@@ -130,7 +124,16 @@ namespace ProjectB.Modules
             reactionEvent.data           = pagedMessageData;
             reactionEvent.reactionEmojis = reactions.ToList();
 
-            m_embedHandler.AddOneTimeEvent(reactionEvent);
+            m_eventHandler.AddReactionEvent(reactionEvent);
+
+            UserMessageEvent messageEvent;
+
+            messageEvent.callback  = PagedEmbedSelectionEventAsync;
+            messageEvent.data      = pagedMessageData;
+            messageEvent.timeStamp = DateTime.Now;
+            messageEvent.message   = embedMessage;
+
+            m_eventHandler.AddUserMessageEvent(pagedMessageData.user, messageEvent);
         }
 
         public async Task PagedEmbedReactionUpdateAsync(IUserMessage message, ISocketMessageChannel channel, SocketReaction reaction, object data)
@@ -158,30 +161,6 @@ namespace ProjectB.Modules
                     shouldRequeueEvent = true;
                     break;
                 }
-                case Number1Unicode:
-                {
-                    break;
-                }
-                case Number2Unicode:
-                {
-                    pagedData.startIndex += 1;
-                    break;
-                }
-                case Number3Unicode:
-                {
-                    pagedData.startIndex += 2;
-                    break;
-                }
-                case Number4Unicode:
-                {
-                    pagedData.startIndex += 3;
-                    break;
-                }
-                case Number5Unicode:
-                {
-                    pagedData.startIndex += 4;
-                    break;
-                }
                 default:
                 {
                     // We should never hit this case
@@ -197,11 +176,36 @@ namespace ProjectB.Modules
 
                 Task task = QueuePagingEvent(pagedData, message);
             }
-            else
+        }
+
+        public async Task PagedEmbedSelectionEventAsync(SocketUserMessage userMessage, object data, IUserMessage message)
+        {
+            PagedMessage pagedData = (PagedMessage)data;
+
+            UInt32 selection;
+
+            bool shouldRequeueEvent = true;
+
+            if (UInt32.TryParse(userMessage.Content, out selection))
             {
-                // Something was chosen, remove all reactions and call the callback function
-                await message.RemoveAllReactionsAsync();
-                await pagedData.selectionCallback(pagedData.entryList[pagedData.startIndex], message, channel);
+                if (selection < pagedData.entryList.Count)
+                {
+                    await message.RemoveAllReactionsAsync();
+                    await pagedData.selectionCallback(pagedData.entryList[((int)selection - 1)], message, (ISocketMessageChannel)message.Channel);
+                    shouldRequeueEvent = false;
+                }
+            }
+
+            if (shouldRequeueEvent)
+            {
+                UserMessageEvent messageEvent;
+
+                messageEvent.callback  = PagedEmbedSelectionEventAsync;
+                messageEvent.data      = pagedData;
+                messageEvent.timeStamp = DateTime.Now;
+                messageEvent.message   = message;
+
+                m_eventHandler.AddUserMessageEvent(pagedData.user, messageEvent);
             }
         }
     }
