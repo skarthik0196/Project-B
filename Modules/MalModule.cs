@@ -29,16 +29,16 @@ namespace ProjectB.Modules
 
             if (searchResults.Count > 1)
             {
-                List<String> pagedResults = await Task.Run(() => m_malService.GetPagedEntries(searchResults));
+                List<Embed> pagedResults = await Task.Run(() => m_malService.GetPagedEntries(searchResults));
 
                 PagedMessage pagedMessage;
-                pagedMessage.entryList         = searchResults.Cast<object>().ToList();
-                pagedMessage.pagedString       = pagedResults;
-                pagedMessage.title             = "Anime Search Results";
-                pagedMessage.startIndex        = 0;
-                pagedMessage.selectionCallback = SelectAnimeFromPage;
-                pagedMessage.restrictToUser    = true;
-                pagedMessage.user              = Context.User;
+                pagedMessage.startPage              = 0;
+                pagedMessage.pages                  = pagedResults;
+                pagedMessage.userData               = searchResults;
+                pagedMessage.selectionCallback      = SelectAnimeFromPage;
+                pagedMessage.respondToMessageEvents = true;
+                pagedMessage.restrictToUser         = true;
+                pagedMessage.user                   = Context.User;
 
                 await SendPagedMessageAsync(pagedMessage);
             }
@@ -48,40 +48,60 @@ namespace ProjectB.Modules
             }
         }
 
-        protected async Task SelectAnimeFromPage(object obj, IUserMessage message, ISocketMessageChannel channel)
+        protected async Task<bool> SelectAnimeFromPage(object obj, IUserMessage userMessage, IUserMessage botMessage, ISocketMessageChannel channel)
         {
-            AnimeSearchEntry searchEntry = (AnimeSearchEntry)obj;
+            List<AnimeSearchEntry> searchResults = (List<AnimeSearchEntry>)obj;
+            bool shouldRequeueEvent              = false;
+            Int32 selection;
 
-            EmbedBuilder builder = await m_malService.GetEmbedMessageFromSearchEntry(searchEntry, false);
+            if (Int32.TryParse(userMessage.Content, out selection))
+            {
+                // Display the selected anime if it's in range
+                if ((selection > 0) && (selection <= searchResults.Count ))
+                {
+                    Int32 index = selection - 1;
+                    Embed embed = await m_malService.GetEmbedMessageFromSearchEntry(searchResults[index], false);
 
-            Embed embed = builder.Build();
+                    await botMessage.RemoveAllReactionsAsync();
+                    await botMessage.ModifyAsync(msg => { msg.Embed = embed; });
 
-            await message.ModifyAsync(msg => { msg.Embed = embed; });
+                    Emoji infoEmoji = new Emoji(s_InformationEmoji);
 
-            Emoji infoEmoji = new Emoji(s_InformationEmoji);
+                    await botMessage.AddReactionAsync(infoEmoji);
 
-            await message.AddReactionAsync(infoEmoji);
+                    List<IEmote> emote = new List<IEmote> { infoEmoji };
 
-            List<IEmote> emote = new List<IEmote> { infoEmoji };
+                    ReactionEventInfo handlerEvent;
+                    handlerEvent.callback       = DisplayDetailedAnime;
+                    handlerEvent.message        = botMessage;
+                    handlerEvent.restrictToUser = false;
+                    handlerEvent.user           = null;
+                    handlerEvent.data           = searchResults[index];
+                    handlerEvent.reactionEmojis = emote;
 
-            ReactionEventInfo handlerEvent;
-            handlerEvent.callback       = DisplayDetailedAnime;
-            handlerEvent.message        = message;
-            handlerEvent.restrictToUser = false;
-            handlerEvent.user           = null;
-            handlerEvent.data           = obj;
-            handlerEvent.reactionEmojis = emote;
+                    m_eventHandler.AddReactionEvent(handlerEvent);
+                }
+                // If the user entered a wrong number, it might have been a typo so requeue the event
+                else
+                {
+                    shouldRequeueEvent = true;
+                }
+            }
+            // TODO: Figure out if there's a preference to keep the event alive even if the reply is completely
+            // unrelated
+            //else
+            //{
+            //    shouldRequeueEvent = true;
+            //}
 
-            m_eventHandler.AddReactionEvent(handlerEvent);
+            return shouldRequeueEvent;
         }
 
         public async Task DisplayDetailedAnime(IUserMessage message, ISocketMessageChannel channel, SocketReaction reaction, object obj)
         {
             AnimeSearchEntry searchEntry = (AnimeSearchEntry)obj;
 
-            EmbedBuilder builder = await m_malService.GetEmbedMessageFromSearchEntry(searchEntry, true);
-
-            Embed embed = builder.Build();
+            Embed embed = await m_malService.GetEmbedMessageFromSearchEntry(searchEntry, true);
 
             await message.ModifyAsync(msg => { msg.Embed = embed; });
         }

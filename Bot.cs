@@ -44,6 +44,9 @@ namespace ProjectB
             // Initialize the event handler
             await services.GetRequiredService<Services.EventHandler>().InitializeAsync();
 
+            // Initialize Azur Lane services
+            await services.GetRequiredService<AzurLaneService>().InitializeAsync();
+
             // Block until program is closed.
             await Task.Delay(Timeout.Infinite);
         }
@@ -71,6 +74,7 @@ namespace ProjectB
                 .AddSingleton<ProjectB.Services.EventHandler>()
                 .AddSingleton<Jikan>()
                 .AddSingleton<MyAnimeListService>()
+                .AddSingleton<AzurLaneService>()
                 .BuildServiceProvider();
         }
     }

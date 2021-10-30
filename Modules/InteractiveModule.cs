@@ -13,19 +13,21 @@ namespace ProjectB.Modules
 {
     public struct PagedMessage
     {
-        // The original data collection, this will be passed back to the callback to interpret once a value is chosen
-        public List<object> entryList;
+        // The current page of the message, set this on creation to start the message at a different index
+        public Int32 startPage;
 
-        // Entries in the sepraate pages of the paged message
-        public List<String> pagedString;
+        // The original data collection, this will be passed back to the callback to interpret once a value is chosen
+        public List<Embed> pages;
+
+        // Data passed back to the user if the callback is used
+        public object userData;
 
         // Callback function when a specific entry in the paged message is selected
-        public Func<object, IUserMessage, ISocketMessageChannel, Task> selectionCallback;
+        // Function must returns a boolean to determine whether the user event must be requeued
+        public Func<object, IUserMessage, IUserMessage, ISocketMessageChannel, Task<bool>> selectionCallback;
 
-        public String title;
-
-        // The current page of the message, set this on creation to start the message at a different index
-        public Int32 startIndex;
+        // If the client is expecting the user to respond via message
+        public bool respondToMessageEvents;
 
         // Restrict response to this Paged Message to a single user.
         public bool  restrictToUser;
@@ -51,21 +53,11 @@ namespace ProjectB.Modules
 
         private const string LeftArrowUnicode  = "⬅️";
         private const string RightArrowUnicode = "➡️";
-        private const string Number1Unicode = "\u0031\u20E3";
-        private const string Number2Unicode = "\u0032\u20E3";
-        private const string Number3Unicode = "\u0033\u20E3";
-        private const string Number4Unicode = "\u0034\u20E3";
-        private const string Number5Unicode = "\u0035\u20E3";
 
-        private static string[] s_EmojiArray = { LeftArrowUnicode,
+        private static string[] s_EmojiArray = { 
+                                                 LeftArrowUnicode,
                                                  RightArrowUnicode,
-                                                 Number1Unicode,
-                                                 Number2Unicode,
-                                                 Number3Unicode,
-                                                 Number4Unicode,
-                                                 Number5Unicode };
-
-        private static Int32 entriesPerPage = 5;
+                                               };
 
         protected InteractiveModule(Services.EventHandler embedHandler)
         {
@@ -74,32 +66,10 @@ namespace ProjectB.Modules
 
         public async Task SendPagedMessageAsync(PagedMessage pagedMessage)
         {
-            Embed embed = GetEmbedPage(pagedMessage);
-
-            IUserMessage embedMessage = await ReplyAsync(null, false, embed);
+            IUserMessage embedMessage = await ReplyAsync(null, false, pagedMessage.pages[pagedMessage.startPage]);
 
             // Unused, don't need to wait
             Task task = QueuePagingEvent(pagedMessage, embedMessage);
-        }
-
-        private Embed GetEmbedPage(PagedMessage pagedMessage)
-        {
-            EmbedBuilder builder = new EmbedBuilder();
-
-            Int32 page = (pagedMessage.startIndex) / entriesPerPage;
-
-            builder.WithTitle(pagedMessage.title)
-                   .WithFooter($"Page {page + 1}/{(pagedMessage.pagedString.Count / entriesPerPage)}");
-
-            pagedMessage.startIndex = page * entriesPerPage;
-
-            for (Int32 i = 0; i < entriesPerPage; ++i)
-            {
-                //builder.AddField($"{(i + 1).ToString()}", pagedMessage.pagedString[pagedMessage.startIndex + i].ToString());
-                builder.AddField($"{(pagedMessage.startIndex + i + 1).ToString()}", pagedMessage.pagedString[pagedMessage.startIndex + i].ToString());
-            }
-
-            return builder.Build();
         }
 
         private async Task QueuePagingEvent(PagedMessage pagedMessageData, IUserMessage embedMessage)
@@ -128,7 +98,7 @@ namespace ProjectB.Modules
 
             UserMessageEvent messageEvent;
 
-            messageEvent.callback  = PagedEmbedSelectionEventAsync;
+            messageEvent.callback  = PagedEmbedResponseEventAsync;
             messageEvent.data      = pagedMessageData;
             messageEvent.timeStamp = DateTime.Now;
             messageEvent.message   = embedMessage;
@@ -145,25 +115,21 @@ namespace ProjectB.Modules
             {
                 case LeftArrowUnicode:
                 {
-                    if (pagedData.startIndex >= entriesPerPage)
-                    {
-                        pagedData.startIndex -= entriesPerPage;
-                    }
+                    pagedData.startPage--;
+                    Math.Clamp(pagedData.startPage, 0, pagedData.pages.Count - 1);
                     shouldRequeueEvent = true;
                     break;
                 }
                 case RightArrowUnicode:
                 {
-                    if (pagedData.startIndex < (pagedData.entryList.Count - entriesPerPage))
-                    {
-                        pagedData.startIndex += entriesPerPage;
-                    }
+                    pagedData.startPage++;
+                    Math.Clamp(pagedData.startPage, 0, pagedData.pages.Count - 1);
                     shouldRequeueEvent = true;
                     break;
                 }
                 default:
                 {
-                    // We should never hit this case
+                    // We should never hit this case because event handler already handles the reactions
                     break;
                 }
             }
@@ -171,39 +137,39 @@ namespace ProjectB.Modules
             // We are moving to a different page
             if (shouldRequeueEvent)
             {
-                Embed embed = GetEmbedPage(pagedData);
-                await message.ModifyAsync(msg => { msg.Embed = embed; });
+                //Embed embed = GetEmbedPage(pagedData);
+                await message.ModifyAsync(msg => { msg.Embed = pagedData.pages[pagedData.startPage]; });
 
                 Task task = QueuePagingEvent(pagedData, message);
             }
         }
 
-        public async Task PagedEmbedSelectionEventAsync(SocketUserMessage userMessage, object data, IUserMessage message)
+        public async Task PagedEmbedResponseEventAsync(SocketUserMessage userMessage, IUserMessage originalBotMessage, object data, DateTime timeStamp)
         {
             PagedMessage pagedData = (PagedMessage)data;
 
-            UInt32 selection;
+            bool shouldRequeueEvent = false;
 
-            bool shouldRequeueEvent = true;
-
-            if (UInt32.TryParse(userMessage.Content, out selection))
+            // If the user replied in a different channel, requeue the event and wait.
+            if (userMessage.Channel.Id != originalBotMessage.Channel.Id)
             {
-                if (selection < pagedData.entryList.Count)
-                {
-                    await message.RemoveAllReactionsAsync();
-                    await pagedData.selectionCallback(pagedData.entryList[((int)selection - 1)], message, (ISocketMessageChannel)message.Channel);
-                    shouldRequeueEvent = false;
-                }
+                shouldRequeueEvent = true;
+            }
+            else
+            {
+                // The user replied in the channel and it might be a reply to our message
+                // Call the client so they can handle it.
+                shouldRequeueEvent = await pagedData.selectionCallback(pagedData.userData, userMessage, originalBotMessage, (ISocketMessageChannel)originalBotMessage.Channel);
             }
 
             if (shouldRequeueEvent)
             {
                 UserMessageEvent messageEvent;
 
-                messageEvent.callback  = PagedEmbedSelectionEventAsync;
+                messageEvent.callback  = PagedEmbedResponseEventAsync;
                 messageEvent.data      = pagedData;
-                messageEvent.timeStamp = DateTime.Now;
-                messageEvent.message   = message;
+                messageEvent.timeStamp = timeStamp;
+                messageEvent.message   = originalBotMessage;
 
                 m_eventHandler.AddUserMessageEvent(pagedData.user, messageEvent);
             }

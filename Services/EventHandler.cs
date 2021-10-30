@@ -12,7 +12,12 @@ using System.Timers;
 
 namespace ProjectB.Services
 {
-    using UserMessageCallback = Func<SocketUserMessage, object, IUserMessage, Task>;
+    // In order of arguments
+    // SocketUser Message - The User Message
+    // IUserMessage - Original Bot Message that a response was requested for
+    // object - Client Data
+    // DateTime - TimeStamp of when the original event was queued. Clients may use this when requeuing events to help enforce the event timeout
+    using UserMessageCallback = Func<SocketUserMessage, IUserMessage, object, DateTime, Task>;
 
     // All events time out after 5 minutes.
     public struct ReactionEventInfo
@@ -40,7 +45,7 @@ namespace ProjectB.Services
     {
         public UserMessageCallback callback;
 
-        // User Data
+        // Client Data
         public object              data;
 
         // Will be filled out EventHandler
@@ -166,7 +171,7 @@ namespace ProjectB.Services
                 {
                     foreach (UserMessageEvent messageEvent in eventList)
                     {
-                        await messageEvent.callback(message, messageEvent.data, messageEvent.message);
+                        await messageEvent.callback(message, messageEvent.message, messageEvent.data, messageEvent.timeStamp);
                     }
 
                     eventList.Clear();
