@@ -13,7 +13,7 @@ namespace ProjectB.Services
 {
     public class MyAnimeListService
     {
-        private static readonly Int32        s_entriesPerPage = 5;
+        private static readonly Int32        s_entriesPerPage = 10;
 
         private readonly IJikan              m_jikan;
         private readonly IServiceProvider    m_services;
@@ -93,7 +93,8 @@ namespace ProjectB.Services
 
             for (Int32 pageNum = 0; pageNum < totalPages; ++pageNum)
             {
-                EmbedBuilder embedBuilder = new EmbedBuilder();
+                EmbedBuilder embedBuilder   = new EmbedBuilder();
+                StringBuilder stringBuilder = new StringBuilder();
 
                 embedBuilder
                     .WithTitle("Anime Search Results")
@@ -103,8 +104,10 @@ namespace ProjectB.Services
                 {
                     Int32 index = (pageNum * s_entriesPerPage) + i;
 
-                    embedBuilder.AddField((index + 1).ToString(), $"{searchEntries[index].Title} ({searchEntries[index].Type})");
+                    stringBuilder.AppendLine($"{(index + 1).ToString()}. {searchEntries[index].Title} ({searchEntries[index].Type})");
                 }
+
+                embedBuilder.WithDescription(stringBuilder.ToString());
 
                 pagedEntries.Add(embedBuilder.Build());
             }

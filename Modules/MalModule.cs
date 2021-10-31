@@ -22,7 +22,12 @@ namespace ProjectB.Modules
             m_malService = malService;
         }
 
+
         [Command("anime")]
+        [RequireBotPermission(ChannelPermission.AddReactions)]
+        [RequireBotPermission(ChannelPermission.SendMessages)]
+        [RequireBotPermission(ChannelPermission.EmbedLinks)]
+        [RequireBotPermission(ChannelPermission.ViewChannel)]
         public async Task AnimeSearchAsync([Remainder] string searchString)
         {
             List<AnimeSearchEntry> searchResults = await m_malService.SearchForAnime(searchString);
@@ -74,7 +79,7 @@ namespace ProjectB.Modules
 
             if (Int32.TryParse(userMessage.Content, out selection))
             {
-                // Display the selected anime if it's in range
+                // Display the selected anime if it's in range (Selection is from [1,Count])
                 if ((selection > 0) && (selection <= searchResults.Count))
                 {
                     Int32 index = selection - 1;
