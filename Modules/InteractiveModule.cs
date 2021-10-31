@@ -24,6 +24,8 @@ namespace ProjectB.Modules
 
         // Callback function when a specific entry in the paged message is selected
         // Function must returns a boolean to determine whether the user event must be requeued
+        // Parameters in order are
+        // Func(UserData, userMessage, originalBotMessage, channel)
         public Func<object, IUserMessage, IUserMessage, ISocketMessageChannel, Task<bool>> selectionCallback;
 
         // If the client is expecting the user to respond via message
@@ -143,6 +145,9 @@ namespace ProjectB.Modules
             {
                 //Embed embed = GetEmbedPage(pagedData);
                 await message.ModifyAsync(msg => { msg.Embed = pagedData.pages[pagedData.startIndex]; });
+
+                // We don't want to requeue the same message event, if we're just moving to a different page.
+                pagedData.respondToMessageEvents = false;
 
                 Task task = QueuePagingEvent(pagedData, message);
             }
