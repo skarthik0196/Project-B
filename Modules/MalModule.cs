@@ -32,7 +32,7 @@ namespace ProjectB.Modules
                 List<Embed> pagedResults = await Task.Run(() => m_malService.GetPagedEntries(searchResults));
 
                 PagedMessage pagedMessage;
-                pagedMessage.startPage              = 0;
+                pagedMessage.startIndex              = 0;
                 pagedMessage.pages                  = pagedResults;
                 pagedMessage.userData               = searchResults;
                 pagedMessage.selectionCallback      = SelectAnimeFromPage;
@@ -44,7 +44,25 @@ namespace ProjectB.Modules
             }
             else if (searchResults.Count == 1)
             {
+                Embed embed = await m_malService.GetEmbedMessageFromSearchEntry(searchResults[0], false);
 
+                IUserMessage message = await ReplyAsync(null, false, embed);
+
+                Emoji infoEmoji = new Emoji(s_InformationEmoji);
+
+                await message.AddReactionAsync(infoEmoji);
+
+                List<IEmote> emote = new List<IEmote> { infoEmoji };
+
+                ReactionEventInfo handlerEvent;
+                handlerEvent.callback       = DisplayDetailedAnime;
+                handlerEvent.message        = message;
+                handlerEvent.restrictToUser = false;
+                handlerEvent.user           = null;
+                handlerEvent.data           = searchResults[0];
+                handlerEvent.reactionEmojis = emote;
+
+                m_eventHandler.AddReactionEvent(handlerEvent);
             }
         }
 
@@ -57,7 +75,7 @@ namespace ProjectB.Modules
             if (Int32.TryParse(userMessage.Content, out selection))
             {
                 // Display the selected anime if it's in range
-                if ((selection > 0) && (selection <= searchResults.Count ))
+                if ((selection > 0) && (selection <= searchResults.Count))
                 {
                     Int32 index = selection - 1;
                     Embed embed = await m_malService.GetEmbedMessageFromSearchEntry(searchResults[index], false);

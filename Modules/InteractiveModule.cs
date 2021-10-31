@@ -14,7 +14,7 @@ namespace ProjectB.Modules
     public struct PagedMessage
     {
         // The current page of the message, set this on creation to start the message at a different index
-        public Int32 startPage;
+        public Int32 startIndex;
 
         // The original data collection, this will be passed back to the callback to interpret once a value is chosen
         public List<Embed> pages;
@@ -66,7 +66,7 @@ namespace ProjectB.Modules
 
         public async Task SendPagedMessageAsync(PagedMessage pagedMessage)
         {
-            IUserMessage embedMessage = await ReplyAsync(null, false, pagedMessage.pages[pagedMessage.startPage]);
+            IUserMessage embedMessage = await ReplyAsync(null, false, pagedMessage.pages[pagedMessage.startIndex]);
 
             // Unused, don't need to wait
             Task task = QueuePagingEvent(pagedMessage, embedMessage);
@@ -82,28 +82,34 @@ namespace ProjectB.Modules
                 new Emoji(s_EmojiArray[((int)EmojiType.RightArrow)])
             };
 
-            // Should we skip the await and just continue?
-            await embedMessage.AddReactionsAsync(reactions);
+            if (pagedMessageData.pages.Count > 1)
+            {
+                // Should we skip the await and just continue?
+                await embedMessage.AddReactionsAsync(reactions);
 
-            ReactionEventInfo reactionEvent;
+                ReactionEventInfo reactionEvent;
 
-            reactionEvent.restrictToUser = pagedMessageData.restrictToUser;
-            reactionEvent.message        = embedMessage;
-            reactionEvent.callback       = PagedEmbedReactionUpdateAsync;
-            reactionEvent.user           = pagedMessageData.user;
-            reactionEvent.data           = pagedMessageData;
-            reactionEvent.reactionEmojis = reactions.ToList();
+                reactionEvent.restrictToUser = pagedMessageData.restrictToUser;
+                reactionEvent.message        = embedMessage;
+                reactionEvent.callback       = PagedEmbedReactionUpdateAsync;
+                reactionEvent.user           = pagedMessageData.user;
+                reactionEvent.data           = pagedMessageData;
+                reactionEvent.reactionEmojis = reactions.ToList();
 
-            m_eventHandler.AddReactionEvent(reactionEvent);
+                m_eventHandler.AddReactionEvent(reactionEvent);
+            }
 
-            UserMessageEvent messageEvent;
+            if (pagedMessageData.respondToMessageEvents)
+            {
+                UserMessageEvent messageEvent;
 
-            messageEvent.callback  = PagedEmbedResponseEventAsync;
-            messageEvent.data      = pagedMessageData;
-            messageEvent.timeStamp = DateTime.Now;
-            messageEvent.message   = embedMessage;
+                messageEvent.callback  = PagedEmbedResponseEventAsync;
+                messageEvent.data      = pagedMessageData;
+                messageEvent.timeStamp = DateTime.Now;
+                messageEvent.message   = embedMessage;
 
-            m_eventHandler.AddUserMessageEvent(pagedMessageData.user, messageEvent);
+                m_eventHandler.AddUserMessageEvent(pagedMessageData.user, messageEvent);
+            }
         }
 
         public async Task PagedEmbedReactionUpdateAsync(IUserMessage message, ISocketMessageChannel channel, SocketReaction reaction, object data)
@@ -115,15 +121,13 @@ namespace ProjectB.Modules
             {
                 case LeftArrowUnicode:
                 {
-                    pagedData.startPage--;
-                    Math.Clamp(pagedData.startPage, 0, pagedData.pages.Count - 1);
+                    pagedData.startIndex = Math.Clamp(--pagedData.startIndex, 0, pagedData.pages.Count - 1);
                     shouldRequeueEvent = true;
                     break;
                 }
                 case RightArrowUnicode:
                 {
-                    pagedData.startPage++;
-                    Math.Clamp(pagedData.startPage, 0, pagedData.pages.Count - 1);
+                    pagedData.startIndex = Math.Clamp(++pagedData.startIndex, 0, pagedData.pages.Count - 1);
                     shouldRequeueEvent = true;
                     break;
                 }
@@ -138,7 +142,7 @@ namespace ProjectB.Modules
             if (shouldRequeueEvent)
             {
                 //Embed embed = GetEmbedPage(pagedData);
-                await message.ModifyAsync(msg => { msg.Embed = pagedData.pages[pagedData.startPage]; });
+                await message.ModifyAsync(msg => { msg.Embed = pagedData.pages[pagedData.startIndex]; });
 
                 Task task = QueuePagingEvent(pagedData, message);
             }

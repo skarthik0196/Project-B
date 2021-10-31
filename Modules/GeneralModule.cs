@@ -10,7 +10,7 @@ using ProjectB.Services;
 
 namespace ProjectB.Modules
 {
-    public class FunModule : ModuleBase<SocketCommandContext>
+    public class GeneralModule : ModuleBase<SocketCommandContext>
     {
         [Command("hello")]
         public async Task HelloAsync()
