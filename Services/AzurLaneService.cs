@@ -398,6 +398,7 @@ namespace ProjectB.Services
             else
             {
                 embedBuilder.WithDescription("No Results, try using `ship.equipment.list` to search for it instead");
+                embedBuilder.WithDescription("No Results");
             }
 
             return embedBuilder.Build();
@@ -454,7 +455,7 @@ namespace ProjectB.Services
                     }
 
                     embedBuilder
-                       .WithTitle("Equipment List")
+                       .WithTitle("Equipment List")                 
                        .WithFooter($"Page {pageIndex + 1}/{pageCount} | Total Equipment: {equipmentList.Count}")
                        .WithDescription(descriptionString.ToString());
 
