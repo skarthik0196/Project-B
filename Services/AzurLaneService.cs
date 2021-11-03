@@ -152,7 +152,7 @@ namespace ProjectB.Services
             {
                 EmbedBuilder embedMessageBuilder = new EmbedBuilder
                 {
-                    Description = "No Results"
+                    Description = "No Results, try searching for the ship with `ship.list` instead"
                 };
 
                 pages.Add(embedMessageBuilder.Build());
@@ -397,6 +397,7 @@ namespace ProjectB.Services
             }
             else
             {
+                embedBuilder.WithDescription("No Results, try using `ship.equipment.list` to search for it instead");
                 embedBuilder.WithDescription("No Results");
             }
 
@@ -454,8 +455,8 @@ namespace ProjectB.Services
                     }
 
                     embedBuilder
-                       .WithTitle("Equipment List")
-                       .WithFooter($"Page {pageIndex + 1}/{pageCount} | Total Ships: {equipmentList.Count}")
+                       .WithTitle("Equipment List")                 
+                       .WithFooter($"Page {pageIndex + 1}/{pageCount} | Total Equipment: {equipmentList.Count}")
                        .WithDescription(descriptionString.ToString());
 
                     pages.Add(embedBuilder.Build());
