@@ -16,7 +16,7 @@ Planned:
 - Setup your own bot as mentioned [here](https://docs.stillu.cc/guides/getting_started/first-bot.html) on the Discord developer portal and add it to your server.
 - Create an environment variable with the name `ProjectBToken` and set the value to your Discord bot token.
 - Open the solution file in Visual Studio and build.
-- Run the project and you should the bot come online.
+- Run the project and you should see the bot come online.
 
 ## Dependencies
 Library dependencies are handled automatically through NuGet. Currently the following libraries are used
