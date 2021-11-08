@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
+WORKDIR /source
+
+# copy csproj and restore as distinct layers
+COPY *.sln .
+COPY *.csproj ./aspnetapp/
+RUN dotnet restore "./aspnetapp/ProjectB.csproj"
+
+# copy everything else and build app
+COPY . ./aspnetapp/
+WORKDIR /source/aspnetapp
+RUN dotnet build "/source/aspnetapp/ProjectB.csproj" -c Release -o /app/build
+RUN dotnet publish "/source/aspnetapp/ProjectB.csproj" -c release -o /app/publish
+
+# final stage/image
+FROM mcr.microsoft.com/dotnet/aspnet:5.0
+WORKDIR /app
+COPY --from=build /app ./
+ENTRYPOINT ["dotnet", "ProjectB.dll"]
