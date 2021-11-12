@@ -14,11 +14,10 @@ services:
     networks:
       - app-tier
     environment:
-      - ProjectBToken=OTA3MDM2Mjc3MzE5Mjgy
+      - ProjectBToken=OTA4MDc4ODYyMTA4MzMyMDQy.YYwgWA.FF
     #   - ASPNETCORE_Kestrel__Certificates__Default__Password="Mirtaz95@#123" 
     #   - ASPNETCORE_Kestrel__Certificates__Default__Path=Library/Keychains/System.keychain/aspnetapp.pfx 
-    # ports:
-    #   - 8000:80
-    #   - 8001:443
+    ports:
+      - 443:443
     # volumes:
-    #   - ${HOME}/.aspnet/https/https
+    #   - ${HOME}/.aspnet/http/http

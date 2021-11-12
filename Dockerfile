@@ -17,7 +17,6 @@ RUN dotnet publish "ProjectB.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-# RUN cp certs/customer.cert /usr/local/share/ca-certificates/customer.crt && update-ca-certificates
 COPY --from=publish /app/publish .
-COPY . .
-ENTRYPOINT ["dotnet","ProjectB.dll"]
+EXPOSE 443
+ENTRYPOINT ["dotnet","ProjectB.dll","--verbosity","detailed"]

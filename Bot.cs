@@ -10,6 +10,9 @@ using Discord.WebSocket;
 using Discord.Commands;
 using ProjectB.Services;
 using JikanDotNet;
+// using System.Security.Cryptography.X509Certificates;
+// [System.Flags]
+// public enum SslPolicyErrors{None}
 
 namespace ProjectB
 {
@@ -24,6 +27,9 @@ namespace ProjectB
         private string m_botToken;
         public async Task RunAsync()
         {
+            // System.Net.ServicePointManager.
+            // ServerCertificateValidationCallback += RemoteCertValidate;
+        
             IServiceProvider services = ConfigureServices();
 
             m_discordClient = services.GetRequiredService<DiscordSocketClient>();
@@ -50,6 +56,14 @@ namespace ProjectB
             // Block until program is closed.
             await Task.Delay(Timeout.Infinite);
         }
+
+        // private static bool RemoteCertValidate(object sender, 
+        //     X509Certificate certificate, 
+        //     X509Chain chain, 
+        //     SslPolicyErrors sslpolicyerrors)
+        // {
+        //     return true;
+        // }
 
         private Task LogAsync(LogMessage message)
         {
